@@ -5,66 +5,17 @@
 //! from Bottle → Bottle. Everything else is emergent.
 //!
 //! Conservation law: one bottle in, one bottle out. Trit sums are preserved.
+//!
+//! Wire types (`Bottle`, `Trit`, `BottleHeader`, `BottleError`, audit functions)
+//! are owned by `superinstance-protocol` and re-exported here for convenience.
+
+// Re-export canonical wire types from protocol
+pub use superinstance_protocol::{
+    audit, audit_strict, Bottle, BottleError, BottleHeader, Trit,
+};
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
-
-/// Ternary value: negative, zero, or positive.
-pub type Trit = i8;
-
-/// A Bottle — the unit of communication between agents.
-///
-/// Hybrid wire format: envelope fields are the contract, payload is opaque.
-/// Trits carry the ternary state; conservation law applies at this level.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Bottle {
-    /// Time-sortable unique identifier (UUIDv7 style).
-    pub id: String,
-    /// Source agent or service id.
-    pub src: String,
-    /// Target agent or service id.
-    pub tgt: String,
-    /// Namespaced action (e.g., "cycle.request", "system.init").
-    pub act: String,
-    /// Ternary state vector — conservation law applies here.
-    pub trits: Vec<Trit>,
-    /// Opaque payload bytes (base64 when serialized).
-    #[serde(with = "b64", default)]
-    pub payload: Vec<u8>,
-}
-
-mod b64 {
-    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-    use serde::{de, Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S: Serializer>(data: &Vec<u8>, s: S) -> Result<S::Ok, S::Error> {
-        s.serialize_str(&BASE64.encode(data))
-    }
-
-    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
-        let s = String::deserialize(d)?;
-        BASE64.decode(&s).map_err(de::Error::custom)
-    }
-}
-
-impl Bottle {
-    /// Create a new bottle with a generated ID.
-    pub fn new(src: impl Into<String>, tgt: impl Into<String>, act: impl Into<String>) -> Self {
-        Self {
-            id: uuid::Uuid::now_v7().to_string(),
-            src: src.into(),
-            tgt: tgt.into(),
-            act: act.into(),
-            trits: Vec::new(),
-            payload: Vec::new(),
-        }
-    }
-
-    /// Sum of trits in this bottle.
-    pub fn trit_sum(&self) -> i32 {
-        self.trits.iter().map(|&t| t as i32).sum()
-    }
-}
 
 /// Lifecycle state of an agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

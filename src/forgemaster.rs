@@ -76,57 +76,57 @@ impl Agent for Forgemaster {
         match bottle.act.as_str() {
             "system.init" => {
                 self.state = AgentState::Active;
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "system.init.ack".into(),
-                    trits: bottle.trits.clone(), // conserve
-                    payload: b"initialized".to_vec(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "system.init.ack",
+                    bottle.trits.clone(),
+                    b"initialized".to_vec(),
+                    300,
+                )
             }
             "system.ping" => {
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "system.pong".into(),
-                    trits: bottle.trits.clone(),
-                    payload: b"pong".to_vec(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "system.pong",
+                    bottle.trits.clone(),
+                    b"pong".to_vec(),
+                    300,
+                )
             }
             "system.suspend" => {
                 self.state = AgentState::Suspended;
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "system.suspend.ack".into(),
-                    trits: bottle.trits.clone(),
-                    payload: b"suspended".to_vec(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "system.suspend.ack",
+                    bottle.trits.clone(),
+                    b"suspended".to_vec(),
+                    300,
+                )
             }
             "system.resume" => {
                 self.state = AgentState::Active;
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "system.resume.ack".into(),
-                    trits: bottle.trits.clone(),
-                    payload: b"resumed".to_vec(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "system.resume.ack",
+                    bottle.trits.clone(),
+                    b"resumed".to_vec(),
+                    300,
+                )
             }
             "system.terminate" => {
                 self.state = AgentState::Terminated;
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "system.terminate.ack".into(),
-                    trits: bottle.trits.clone(),
-                    payload: b"terminated".to_vec(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "system.terminate.ack",
+                    bottle.trits.clone(),
+                    b"terminated".to_vec(),
+                    300,
+                )
             }
             "cycle.request" => {
                 self.cycle_count += 1;
@@ -142,25 +142,25 @@ impl Agent for Forgemaster {
                 };
                 self.update_ewma(quality_value);
 
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "cycle.complete".into(),
-                    trits: quality_trits,
-                    payload: format!("cycle#{}", self.cycle_count).into_bytes(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "cycle.complete",
+                    quality_trits,
+                    format!("cycle#{}", self.cycle_count).into_bytes(),
+                    300,
+                )
             }
             _ => {
                 // Unknown action: echo back with same trits (conservation)
-                Bottle {
-                    id: uuid::Uuid::now_v7().to_string(),
-                    src: "forgemaster".into(),
-                    tgt: bottle.src.clone(),
-                    act: "unknown.ack".into(),
-                    trits: bottle.trits.clone(),
-                    payload: format!("unknown action: {}", bottle.act).into_bytes(),
-                }
+                Bottle::new_raw(
+                    "forgemaster",
+                    bottle.src.clone(),
+                    "unknown.ack",
+                    bottle.trits.clone(),
+                    format!("unknown action: {}", bottle.act).into_bytes(),
+                    300,
+                )
             }
         }
     }
@@ -181,26 +181,12 @@ mod tests {
 
     /// Helper: create a system bottle.
     fn sys_bottle(action: &str, trits: Vec<Trit>) -> Bottle {
-        Bottle {
-            id: uuid::Uuid::now_v7().to_string(),
-            src: "system".into(),
-            tgt: "forgemaster".into(),
-            act: action.into(),
-            trits,
-            payload: Vec::new(),
-        }
+        Bottle::new_empty("system", "forgemaster", action, trits, 300)
     }
 
     /// Helper: create a cycle request bottle.
     fn cycle_request(trits: Vec<Trit>) -> Bottle {
-        Bottle {
-            id: uuid::Uuid::now_v7().to_string(),
-            src: "fleet-edge".into(),
-            tgt: "forgemaster".into(),
-            act: "cycle.request".into(),
-            trits,
-            payload: Vec::new(),
-        }
+        Bottle::new_empty("fleet-edge", "forgemaster", "cycle.request", trits, 300)
     }
 
     /// Forgemaster handles cycle.request and returns cycle.complete.
@@ -278,7 +264,7 @@ mod tests {
         // Let's verify the runner catches a mismatch.
         let cycle = cycle_request(vec![1, 1, 1]); // sum = 3
         let result = runner.receive(cycle);
-        // F履gemaster returns quality_signal based on cycle count, which may not sum to 3
+        // Forgemaster returns quality_signal based on cycle count, which may not sum to 3
         // The runner should detect this if sums differ
         // (If they happen to match, the test still passes — the runner is working)
         match result {
