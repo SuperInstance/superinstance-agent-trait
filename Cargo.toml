@@ -1,0 +1,14 @@
+[package]
+name = "superinstance-agent-trait"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/superinstance/superinstance-agent-trait"
+edition = "2021"
+description = "2-method Agent trait with structural conservation for superinstance"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+uuid = { version = "1", features = ["v7"] }
+base64 = "0.22"
+
+[dev-dependencies]
